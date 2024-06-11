@@ -1,0 +1,152 @@
+---
+title: "Day2_practical"
+author: "Valentina Peona"
+date: "2024-06-11"
+output: html_document
+---
+
+# Simulate allele frequency evolution
+
+## Simulate allele frequency from one generation to another
+
+Use binomial distribution to simulate allele frequency from one generation to another. We are drawing from the sample initial population multiple times, we are repeating the same experiment (generation) over and over.
+
+```{r}
+# set the parameters
+
+# population size
+N = 50
+
+# initial allele frequency for allele A
+fA = 0.5
+
+# number of times to sample the population
+n_gen = 100
+
+# sample the population with binomial distribution - for one generation
+freq = rbinom(n_gen, 2*N, fA) / (2*N)
+```
+
+Plot the allele frequency between one generation to the next
+
+```{r}
+# load the libraries for plotting
+library(ggplot2)
+
+# creata dataframe for plotting
+data = data.frame(Times = 1:n_gen, Allele_frequency = freq)
+
+plot = ggplot(data, aes(x = Times, y = Allele_frequency)) + geom_line() + geom_point()
+# add horizontal line to the plot
+plot + geom_hline(yintercept = mean(freq), col = "red") + theme_bw() + ylab("Allele frequency") + xlab("Sampling times")
+```
+The allele frequency from one generation to another under HWE is expected to be stable and be equal to the initial allele frequency. The red line represents the mean allele frequency across all the sampling.
+
+## Simulate allele frequency over many generations
+
+- Do allele frequencies change over multiple generations?
+- What's the chance of an allele to get fixed or lost? Compare different initial allele frequencies.
+
+Simulate allele frequency over many generations
+
+```{r}
+# set the parameters
+
+# population size
+N = 50
+
+# initial allele frequency for allele A
+fA = 0.5
+
+# number of generations to simulate
+n_gen = 100
+
+# table to store the allele frequency over time
+data = data.frame(Generation = 1:n_gen, Allele_frequency = fA)
+
+for(i in 1:n_gen){
+  
+  fA = rbinom(1, 2*N, fA) / (2*N)
+  data[i, 2] = fA 
+  
+}
+
+ggplot(data = data, aes(x = Generation, y = Allele_frequency)) + geom_line() + geom_point() + theme_bw() + ylab("Allele frequency") + xlab("Generation")
+
+```
+
+
+Simulate multiple rounds of allele frequency evolution with different initial allele frequencies
+
+```{r}
+# set the parameters
+N = 50
+n_gen = 100
+frequencies = c(0.1, 0.5, 0.7, 0.9)
+rounds = 1:10
+
+# table to store the allele frequency over time
+data = data.frame(Generation = n_gen * max(rounds), Allele_frequency = 0, Initial_frequency = 0, Round = 0)
+
+for(j in 1:length(frequencies)){
+  
+  fA = frequencies[j]
+  
+  for(round in rounds){
+  
+    for(i in 1:(n_gen)){
+    
+      fA = rbinom(1, 2*N, fA) / (2*N)
+      data$Allele_frequency[i] = fA 
+      data$Initial_frequency[i] = frequencies[j]
+      data$Round[i] = round
+    
+    }
+  
+  }
+
+}
+
+```
+
+## Simulate allele frequencies with different effective population sizes
+
+```{r}
+# large population
+N = 500
+
+# initial allele frequency for allele A
+fA = 0.5
+
+# number of generations to simulate
+n_gen = 100
+
+# table to store the allele frequency over time
+large = data.frame(Generation = 1:n_gen, Allele_frequency = fA)
+
+for(i in 1:n_gen){
+  
+  fA = rbinom(1, 2*N, fA) / (2*N)
+  large[i, 2] = fA 
+  
+}
+
+# small population
+N = 10
+
+# table to store the allele frequency over time
+small = data.frame(Generation = 1:n_gen, Allele_frequency = fA)
+
+for(i in 1:n_gen){
+  
+  fA = rbinom(1, 2*N, fA) / (2*N)
+  small[i, 2] = fA 
+  
+}
+small$Type = "small"
+large$Type = "large"
+data = rbind(large, small)
+
+ggplot(data = data, aes(x = Generation, y = Allele_frequency, col = Type)) + geom_line() + geom_point() + theme_bw() + ylab("Allele frequency") + xlab("Generation") + ggtitle("Initial allele frequency of 0.5")
+
+```
