@@ -68,4 +68,10 @@ hist(Nanc, main = "Nanc", xlab = "Population size", col = "lightblue", breaks = 
 hist(migration, main = "Migration rate", xlab = "Rate", col = "lightblue", breaks = 20)
 ```
 
+## Run msprime
+
+Assume a mutation rate of 3.5e-9, a recombination rate of 8.4e-9, and a sequence length of 1,000 bp.
+
+  
+
 
