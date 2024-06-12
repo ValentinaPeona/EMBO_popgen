@@ -1,0 +1,71 @@
+---
+title: "Day3_Practical1"
+author: "Valentina Peona"
+date: "2024-06-12"
+output: html_document
+---
+
+# Day 3 - Practical 1
+
+Model prior distributions for split time, population sizes, migration rate and ancestral population size.
+
+## Simulate distributions for the parameters
+
+T_split: we know that these populations have been separated by at least 1,000 generations and a
+major environmental change between these two locations happened around 8,000 generations ago.
+
+This prior can be modeled as a normal distribution with mean around 1000 and 8000 will be on the 97.5 percentile of the distribution.
+
+N1/N2: we know from capture-recapture data that population 1 is approximately 30 times larger
+than population 2; we also don't have a clear intuition of each value but from previous findings we expect values for population 1 to be between 50,000 and 200,000.
+
+The priors for N1 and N2 are connected, therefore a normal distribution for N1 will just be scaled by 30 times for N2.
+
+We expect either complete isolation after the split (rate=0) or pervasive migration (rate=0.1).
+
+This prior can modeled as a bimodal distribution.
+
+Nanc: we know this value with high confidence to be around 7,000,000
+
+This prior can be modeled as a normal distribution with mean around 7,000,000 and a small standard deviation.
+
+
+```{r}
+# simulate distributions at least 500 times for each parameter
+times = 500
+
+migration = sample(x = c(0,1), size = times, prob = c(0.5,0.5), replace = TRUE)
+Nanc = rnorm(times, mean = 7000000, sd = 10000)
+N1 = rnorm(times, mean=125000, sd=25000)
+N2 = N1/30
+
+# sample the distribution of T_split until I get 500 values higher than 1000
+Tsplit = rnorm(times, mean = 1000, sd = 3000)
+Tsplit = Tsplit[Tsplit >= 1000]
+diff = times - length(Tsplit)
+while(diff > 0){
+  
+  new = rnorm(diff, mean = 1000, sd = 3000)
+  new = new[new >= 1000]
+  Tsplit = c(Tsplit, new)
+  diff = times - length(Tsplit)
+  
+}
+```
+
+## Plot the distributions
+
+```{r}
+# Time of the split
+hist(Tsplit, main = "Time of split", xlab = "Time", col = "lightblue", breaks = 20)
+
+# Population sizy of N1, N2 and Nanc
+hist(N1, main = "N1", xlab = "Population size", col = "lightblue", breaks = 20)
+hist(N2, main = "N2", xlab = "Population size", col = "lightblue", breaks = 20)
+hist(Nanc, main = "Nanc", xlab = "Population size", col = "lightblue", breaks = 20)
+
+# Migration rate
+hist(migration, main = "Migration rate", xlab = "Rate", col = "lightblue", breaks = 20)
+```
+
+
