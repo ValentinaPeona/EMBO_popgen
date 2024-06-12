@@ -83,15 +83,19 @@ library(abc)
 
 # the first row is given as target because it is the observed data
 est <- abc(target=sumstats[1,], param=sims$T_split, sumstat=sumstats[-1,], tol=0.05, method="rejection")
+```
 
+Plot the results
+
+```{r}
 # check distances in the acceptance region
 hist(est$dist)
 # whatever is falling before the vertical line are the values accepted
 abline(v=max(est$dist[which(est$region)]), lty=2)
 
 # posterior
-x11()
-par(mfrow=c(2,1))
+#x11()
+par(mfrow=c(2,2))
 hist(est$unadj.values, freq=FALSE, xlim=range(sims$T_split), col=rgb(0,0,1,1/4), main="Posterior probability", xlab="Split time")
 # MAP
 map <- mean(est$unadj.values)
@@ -103,9 +107,4 @@ abline(v=hpd, lty=3)
 
 # prior
 hist(sims$T_split, freq=FALSE, xlim=range(sims$T_split), col=rgb(1,0,0,1/4))
-
-
-
-
-
 ```
