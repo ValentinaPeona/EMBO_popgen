@@ -148,5 +148,4 @@ large$Type = "large"
 data = rbind(large, small)
 
 ggplot(data = data, aes(x = Generation, y = Allele_frequency, col = Type)) + geom_line() + geom_point() + theme_bw() + ylab("Allele frequency") + xlab("Generation") + ggtitle("Initial allele frequency of 0.5")
-
 ```
