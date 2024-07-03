@@ -1,0 +1,268 @@
+---
+title: "Day6_Practical1"
+author: "Valentina Peona"
+date: "2024-06-15"
+output: html_document
+---
+
+# Methods to detect intraspecific natural selection
+
+## Investigating a “Candidate Gene”
+
+We refer to a “candidate gene” when we investigate whether there is evidence of natural selection in it based on previous results suggesting that it is a possible target for selection. Detecting signatures of natural selection in the genome has the twofold meaning of (i) understanding which adaptive processes shaped genetic variation and (ii) identifying putative functional variants. In the case of humans, biological pathways enriched with selection signatures include pigmentation (Wilde et al. 2014), pathogen responses (Klunk et al. 2022; Couto-Silva, Nunes et al. 2023), and metabolic processes (Acuña-Alonzo et al. 2010). The human Ectodysplasin A receptor gene, or EDAR, is part of the EDA signaling pathway which specifies prenatally the location, size, and shape of ectodermal appendages (such as hair follicles, teeth, and glands). EDAR is a textbook example of positive selection in East Asians (Sabeti et al. 2007) with genomic and functional experiments corroborating it. Also, genome-wide association studies found the same functional variant in EDAR associated hair morphology (Fujimoto et al. 2008) and incisor shape (Kimura et al. 2009) in East Asia populations and with several human facial traits (ear shape and chin protrusion) in Native American populations (Adhikari et al. 2016). Another plausible hypothesis stated that EDAR acted with FADs and VDRs genes in the Beringia Standstill (Hlusko et al. 2018), allowing these populations to survive in this extreme environment.
+
+
+### objectives
+
+Through the exercises, discuss and answer the following questions:
+
+1. The estimate of Fst by the Weir and Cockerham metric can sometimes generate negative values and “NA.” What does that mean? How can this interfere with the results?
+
+2. The Fst values observed between pairs of populations for the SNP rs3827760 (position 109513601) fall within which distribution quantiles of Fst values for the studied chromosome? Can they be considered outliers?
+
+3. From the observed Fst values between population pairs and the significance estimates, what can we say about the rs3827760 SNP differentiation between populations?
+
+4. Discuss how these results justify performing another type of analysis based on PBS (population branch statistics).
+
+5. What does the PBS analysis reveal? What is the difference between PBS and FST analysis?
+
+
+Use R to run the following commands:
+
+a. Read the files with the Fst estimates (AFR_EUR.weir.fst, AFR_EAS.weir.fst and EAS_EUR.weir.fst)
+
+```{r}
+# read the files with the Fst estimates
+# the files are in Day6/EMBO_Practical_Course_2024-main
+
+AFR_EUR <- read.table("Day6/EMBO_Practical_Course_2024-main/AFR_EUR.weir.fst", header = TRUE)
+nrow(AFR_EUR)
+AFR_EAS <- read.table("Day6/EMBO_Practical_Course_2024-main/AFR_EAS.weir.fst", header = TRUE)
+nrow(AFR_EAS)
+EAS_EUR <- read.table("Day6/EMBO_Practical_Course_2024-main/EAS_EUR.weir.fst", header = TRUE)
+nrow(EAS_EUR)
+```
+
+b. Eliminate duplicate positions
+
+```{r}
+# eliminate duplicate positions
+AFR_EUR <- AFR_EUR[!duplicated(AFR_EUR$POS),]
+nrow(AFR_EUR)
+AFR_EAS <- AFR_EAS[!duplicated(AFR_EAS$POS),]
+nrow(AFR_EAS)
+EAS_EUR <- EAS_EUR[!duplicated(EAS_EUR$POS),]
+nrow(EAS_EUR)
+```
+
+c. Take a look at the weir.fst file
+
+```{r}
+# take a look at the weir.fst file
+head(AFR_EUR)
+```
+
+The estimation of FST by Weir and Cockerham can sometimes generate negative values, and Na. What does this mean? How can it interfere with the results?
+
+The FST values are calculated as the proportion of the total genetic variance that is due to differences between populations. The Weir and Cockerham estimator is a weighted estimator that accounts for the sample size of the populations being compared. Negative FST values can occur when the genetic variance within populations is higher than the genetic variance between populations. This can happen when there is a high level of gene flow between populations or when the populations are not well differentiated. Negative FST values can also occur due to sampling error or other factors that affect the estimation of genetic variance. Negative FST values can interfere with the interpretation of the results because they indicate that the populations are not well differentiated genetically. This can make it difficult to detect signals of natural selection or population structure. In some cases, negative FST values can be set to zero to avoid bias in the analysis.
+
+a. Exclude positions whose FST result was equal to Na
+
+```{r}
+# exclude positions whose FST result was equal to Na
+AFR_EUR <- AFR_EUR[!is.na(AFR_EUR$WEIR_AND_COCKERHAM_FST),]
+nrow(AFR_EUR)
+AFR_EAS <- AFR_EAS[!is.na(AFR_EAS$WEIR_AND_COCKERHAM_FST),]
+nrow(AFR_EAS)
+EAS_EUR <- EAS_EUR[!is.na(EAS_EUR$WEIR_AND_COCKERHAM_FST),]
+nrow(EAS_EUR)
+```
+
+b. The datasets now have different sets of SNPs, filter the files by overlapping the SNPs between them.
+
+```{r}
+# the datasets now have different sets of SNPs, filter the files by overlapping the SNPs between them
+common_positions <- Reduce(intersect, list(AFR_EUR$POS, AFR_EAS$POS, EAS_EUR$POS))
+length(common_positions)
+AFR_EUR <- AFR_EUR[AFR_EUR$POS %in% common_positions,]
+nrow(AFR_EUR)
+AFR_EAS <- AFR_EAS[AFR_EAS$POS %in% common_positions,]
+nrow(AFR_EAS)
+EAS_EUR <- EAS_EUR[EAS_EUR$POS %in% common_positions,]
+nrow(EAS_EUR)
+```
+
+c. Convert positions with estimates from FST < 0 to = 0
+
+```{r}
+# convert positions with estimates from FST < 0 to = 0
+AFR_EUR$WEIR_AND_COCKERHAM_FST[AFR_EUR$WEIR_AND_COCKERHAM_FST < 0] = 0
+AFR_EAS$WEIR_AND_COCKERHAM_FST[AFR_EAS$WEIR_AND_COCKERHAM_FST < 0] = 0
+EAS_EUR$WEIR_AND_COCKERHAM_FST[EAS_EUR$WEIR_AND_COCKERHAM_FST < 0] = 0
+```
+
+Now with the data filtered and matched, let's check if the SNP rs3827760 (pos 109513601) is a candidate for natural selection.
+
+a. Check if the SNP rs3827760, located at position 109513601, is an outlier in the FST distribution for any of the population pairs.
+
+
+```{r}
+# check if the SNP rs3827760, located at position 109513601, is an outlier in the FST distribution for any of the population pairs
+library(ggplot2)
+
+# 95th quantile
+q95 = quantile(AFR_EUR$WEIR_AND_COCKERHAM_FST, 0.95)
+
+# plot distribution of Fst values, 95th quantile and fst values for SNP rs3827760
+ggplot(data = AFR_EUR, aes(x = WEIR_AND_COCKERHAM_FST)) +
+  geom_histogram() +
+  geom_vline(xintercept = q95, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = AFR_EUR$WEIR_AND_COCKERHAM_FST[AFR_EUR$POS == 109513601], linetype = "dashed", color = "green") +
+  labs(title = "AFR_EUR FST distribution", x = "FST value", y = "Frequency")  + theme_bw()
+
+q95 = quantile(AFR_EAS$WEIR_AND_COCKERHAM_FST, 0.95)
+
+ggplot(data = AFR_EAS, aes(x = WEIR_AND_COCKERHAM_FST)) +
+  geom_histogram() +
+  geom_vline(xintercept = q95, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = AFR_EAS$WEIR_AND_COCKERHAM_FST[AFR_EAS$POS == 109513601], linetype = "dashed", color = "green") +
+  labs(title = "AFR_EAS FST distribution", x = "FST value", y = "Frequency")  + theme_bw()
+
+q95 = quantile(EAS_EUR$WEIR_AND_COCKERHAM_FST, 0.95)
+
+ggplot(data = EAS_EUR, aes(x = WEIR_AND_COCKERHAM_FST)) +
+  geom_histogram() +
+  geom_vline(xintercept = q95, linetype = "dashed", color = "red") +
+  geom_vline(xintercept = EAS_EUR$WEIR_AND_COCKERHAM_FST[EAS_EUR$POS == 109513601], linetype = "dashed", color = "green") +
+  labs(title = "EAS_EUR FST distribution", x = "FST value", y = "Frequency") + theme_bw()
+```
+
+b. In which quartile of the distribution does the FST value for the SNP rs3827760 fall in each analyzed population pair?
+
+```{r}
+# check in which quartile of the distribution the FST value for the SNP rs3827760 falls in each analyzed population pair
+
+
+```
+
+c. Please plot the FST values in a 10,000 base pair region adjacent to the SNP at position 109513601. Highlight the SNPs that are outliers in the 95th percentile in each population pair.
+
+```{r}
+# plot the FST values in a 10,000 base pair region adjacent to the SNP at position 109513601
+# highlight the SNPs that are outliers in the 95th percentile in each population pair
+q95 = quantile(x = AFR_EUR$WEIR_AND_COCKERHAM_FST, probs = 0.95)
+ggplot(data = AFR_EUR[AFR_EUR$POS >= 109503601 - 10000 & AFR_EUR$POS <= 109523601 + 10000,], aes(x = POS, y = WEIR_AND_COCKERHAM_FST)) + geom_point() + theme_bw() + geom_hline(yintercept = q95, linetype = "dashed", color = "red") + labs(title = "AFR_EUR FST values around SNP rs3827760", x = "Position", y = "FST value")
+
+q95 = quantile(x = AFR_EAS$WEIR_AND_COCKERHAM_FST, probs = 0.95)
+ggplot(data = AFR_EAS[AFR_EAS$POS >= 109503601 - 10000 & AFR_EAS$POS <= 109523601 + 10000,], aes(x = POS, y = WEIR_AND_COCKERHAM_FST)) + geom_point() + theme_bw() + geom_hline(yintercept = q95, linetype = "dashed", color = "red") + labs(title = "AFR_EAS FST values around SNP rs3827760", x = "Position", y = "FST value")
+
+q95 = quantile(x = EAS_EUR$WEIR_AND_COCKERHAM_FST, probs = 0.95)
+ggplot(data = EAS_EUR[EAS_EUR$POS >= 109503601 - 10000 & EAS_EUR$POS <= 109523601 + 10000,], aes(x = POS, y = WEIR_AND_COCKERHAM_FST)) + geom_point() + theme_bw() + geom_hline(yintercept = q95, linetype = "dashed", color = "red") + labs(title = "EAS_EUR FST values around SNP rs3827760", x = "Position", y = "FST value")
+```
+
+Can the candidate SNP be considered an outlier in all populations? What is the interpretation of this result?
+
+a. Estimate the p-value for the candidate SNP from the distribution of FST values for each population pair.
+
+```{r, eval = FALSE}
+# get percentile for a given value from a distribution
+tolerance = 0.005
+step = 0.005
+n = 1
+while(diff > tolerance){
+  
+  if((0.95 + n * step) <= 1){
+    pvalue = quantile(x = EAS_EUR$WEIR_AND_COCKERHAM_FST, probs = (0.95 + n * step))
+    diff = abs(pvalue - EAS_EUR$WEIR_AND_COCKERHAM_FST[EAS_EUR$POS == 109513601])
+    n = n + 1
+  } else {
+    diff = 0
+  }
+
+}
+
+pvalue = 1 - (0.95 + n * step)
+if(pvalue < 0.05){
+  print("Significant")
+} else {
+  print("Not significant")
+}
+```
+
+## Population Branch Statistics (PBS)
+
+Use R to:
+
+1. Based on population differentiation methods, let's explore selection signals using the PBS (Population Branch Statistic) approach.
+
+PBS = ((-log(1 -Fst AB) + (-log(1 - Fst AC)) - (-log(1 - Fst BC)/ 2 )
+
+Where:
+
+A: clade of interest - EAS
+B: sister group of A - EUR
+C: outgroup - AFR
+
+a. Perform PBS test, using EAS as candidate population for selection
+Calculate the PBS for EAS as clade A
+
+```{r}
+# calculate the PBS for EAS as clade A
+PBS = ((-log(1 - EAS_EUR$WEIR_AND_COCKERHAM_FST)) + (-log(1 - AFR_EAS$WEIR_AND_COCKERHAM_FST)) - (-log(1 - AFR_EUR$WEIR_AND_COCKERHAM_FST))) / 2
+```
+
+b. Convert negative PBS values to O.
+
+```{r}
+# convert negative PBS values to 0
+PBS[PBS < 0] = 0
+```
+
+c. Add to the data.table with FST values, a new column with PBS values.
+
+```{r}
+# add to the data.table with FST values, a new column with PBS values
+EAS_EUR$PBS = PBS
+```
+
+d. Check the PBS value for the candidate SNP.
+position: 109513601
+
+```{r}  
+EAS_EUR[EAS_EUR$POS == 109513601,]
+```
+
+e. In which quartile of the distribution does the PBS value for the SNP rs3827760 fall?
+
+```{r}
+quantile(x = EAS_EUR$PBS)
+EAS_EUR[EAS_EUR$POS == 109513601,]
+```
+The PBS value for the SNP of interest is in the 4th quartile of the distribution.
+
+f. Plot the PBS values in a 10,000 base pair region adjacent to the SNP at position 109513601. Highlight the SNPs that are outliers in the 95th percentile.
+- Select 10000bp adjacent to candidate SNP
+- Subset the candidate SNP region
+- Plot PBS values
+
+```{r}
+q95 = quantile(x = EAS_EUR$PBS, probs = 0.95)
+
+# plot and highlight the values over the 95th quantile with a second color
+ggplot(data = EAS_EUR[EAS_EUR$POS >= (109503601 - 10000) & EAS_EUR$POS <= (109523601 + 10000),], aes(x = POS, y = PBS)) + geom_point() + theme_bw() + geom_hline(yintercept = q95, linetype = "dashed", color = "red") + labs(title = "EAS_EUR PBS values around SNP rs3827760", x = "Position", y = "PBS value") + geom_point(data = EAS_EUR[EAS_EUR$PBS >= q95 & EAS_EUR$POS >= (109503601 - 10000) & EAS_EUR$POS <= (109523601 + 10000),], aes(x = POS, y = PBS), color = "red")
+```
+
+## PART II
+
+### EXTENDED HAPLOTYPE HOMOZYGOSITY (EHH)
+
+Different approaches are able to detect genomic signatures of selection at different timescales. More recent selection signals can be detected from the extended haplotype homozygosity approach.
+
+Install the rehh R package
+
+```{r}
+install.packages("rehh")
+library("rehh")
+```
+
+

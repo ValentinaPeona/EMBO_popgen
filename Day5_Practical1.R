@@ -1,5 +1,12 @@
 
 pops = c("French", "Basque", "Spanish")
+
+
+yamnaya_europe_f4 <- f4(data = f2_blocks, pop1 = "Mbuti", pop2 = "Yamnaya", pop3 = "LBK", pop4 = pops)
+
+
+
+
 for(i in 1:length(pops)){
 
 print(i)
